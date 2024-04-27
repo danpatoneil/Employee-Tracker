@@ -39,6 +39,14 @@ function start() {
           viewEmployees();
           break;
 
+        case "Veiw Employees by Manager":
+          viewEmployeesByManager();
+          break;
+
+        case "Veiw Employees by Department":
+          viewEmployeesByDepartment();
+          break;
+
         case "Add Employee":
           addEmployee();
           break;
@@ -167,7 +175,6 @@ function addEmployee() {
                   role_id: role.id,
                   manager_id: manager.id,
                 };
-                console.log(newEmployee);
                 db.query(
                   "INSERT INTO employees SET ?",
                   newEmployee,
@@ -177,7 +184,7 @@ function addEmployee() {
                       : console.log(
                           `Employee ${first_name} ${last_name} added`
                         ),
-                      start();
+                      viewEmployees();
                   }
                 );
               });
@@ -411,9 +418,9 @@ function addDepartment() {
     })
     .then((answer) => {
       const newDepartment = {
-        department_name: answer.name
-      }
-    //   console.log(newDepartment);
+        department_name: answer.name,
+      };
+      //   console.log(newDepartment);
       db.query("INSERT INTO departments SET ?", newDepartment, (err, res) => {
         err ? console.error(err) : viewDepartments();
       });
@@ -421,6 +428,40 @@ function addDepartment() {
     .catch((err) => {
       console.error(err);
     });
+}
+
+function viewEmployeesByManager() {
+  db.query(
+    `SELECT IFNULL(CONCAT(man.first_name, " ", man.last_name), "No manager on file") as Manager, CONCAT(emp.first_name, " ", emp.last_name) AS Employee, title, department_name as department, salary
+    FROM employees AS emp
+    LEFT JOIN employees AS man
+    ON emp.manager_id = man.id
+    LEFT JOIN roles
+    ON roles.id = emp.role_id
+    LEFT JOIN departments
+    ON roles.department_id = departments.id
+    ORDER BY Manager;`,
+    (err, res) => {
+      err ? console.error(err) : console.table(res), start();
+    }
+  );
+}
+
+function viewEmployeesByDepartment() {
+    db.query(
+      `SELECT department_name as department, CONCAT(emp.first_name, " ", emp.last_name) AS Employee, title, salary, IFNULL(CONCAT(man.first_name, " ", man.last_name), "") as Manager
+      FROM employees AS emp
+      LEFT JOIN employees AS man
+      ON emp.manager_id = man.id
+      LEFT JOIN roles
+      ON roles.id = emp.role_id
+      LEFT JOIN departments
+      ON roles.department_id = departments.id
+      ORDER BY department, salary;`,
+      (err, res) => {
+        err ? console.error(err) : console.table(res), start();
+      }
+    );
 }
 
 start();
