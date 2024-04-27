@@ -1,7 +1,7 @@
 const inquirer = require("inquirer");
 const mysql = require("mysql2");
 const cTable = require("console.table");
-
+// simply connects to the db created by running schema and then seeds
 const db = mysql.createConnection(
   {
     host: "localhost",
@@ -12,6 +12,7 @@ const db = mysql.createConnection(
   console.log("connected")
 );
 
+// this function brings the user to the "main menu", it should be run at the end of every user option except for quit
 function start() {
   inquirer
     .prompt({
@@ -32,7 +33,7 @@ function start() {
       ],
     })
     .then((answers) => {
-      console.log(answers.opening);
+      // a switch case controls which helper function gets called
       let userChoice = answers.opening;
       switch (userChoice) {
         case "Veiw All Employees":
@@ -81,10 +82,8 @@ function start() {
     });
 }
 
+//simply prints a table of all employees ordered by id, includes left joins to the roles and departments tables and also a self join for the managers' names
 function viewEmployees() {
-  //select emp.first_name as "First Name", emp.last_name as "Last Name", concat(man.first_name, " ", man.last_name) as Manager FROM employees emp, employees man
-  // where man.id = emp.manager_id;
-  //
   db.query(
     `SELECT emp.id, emp.first_name as "First Name", emp.last_name as "Last Name", title, department_name as department, salary, IFNULL(CONCAT(man.first_name, " ", man.last_name), "") as Manager
         FROM employees AS emp
@@ -101,6 +100,7 @@ function viewEmployees() {
   );
 }
 
+// similar to viewEmployees, but for the table of departments
 function viewDepartments() {
   //first_name, last_name, title, salary
   db.query(
@@ -111,6 +111,7 @@ function viewDepartments() {
   );
 }
 
+// this one is also the same, but for the roles table
 function viewRoles() {
   //first_name, last_name, title, salary
   db.query(
@@ -120,6 +121,8 @@ function viewRoles() {
     }
   );
 }
+
+// this queries the user for what the new employee's name, role, and manager will be, and adds them to the database
 function addEmployee() {
   db.query("SELECT id, title FROM roles", (err, res) => {
     if (err) console.error(err);
@@ -195,6 +198,7 @@ function addEmployee() {
   });
 }
 
+// the udpate employee function actually runs this, which runs the updateEmployee function afterwards. It asks for which employee the user wants to update and passes that to the next function
 function chooseEmployee() {
   db.query(
     'SELECT id, CONCAT(first_name, " ", last_name) AS name, role_id, manager_id FROM employees',
@@ -217,6 +221,8 @@ function chooseEmployee() {
     }
   );
 }
+
+// this is the second part of Update an Employee, it takes the employee list and selected employee and asks the user what they'd like to update. if they say either of the employee's names then the function simply calls an update query on the new name they've provided. If they choose manager, it uses the employees list as a list inquiry and updates the user based on the selected employee. Finally if they choose role it will call the role table and ask them to select a role, and update based on the role provided.
 function updateEmployee(employees, employeeName) {
   const targetEmployeeID = employees.find(
     (obj) => obj.name === employeeName
@@ -230,7 +236,7 @@ function updateEmployee(employees, employeeName) {
         choices: ["First Name", "Last Name", "Title", "Manager"],
       },
     ])
-    .then((answer) => {
+    .then((answer) => { //in future I might move all of these into helper functions but that seemed to move to be too clunky in the other direction.
       switch (answer.updateOption) {
         case "First Name":
           inquirer
@@ -272,7 +278,7 @@ function updateEmployee(employees, employeeName) {
           break;
 
         case "Title":
-          //   console.log("under construction");
+        //running a mysql2 query and running inquirer inside of it was the most elegant way I could find to do this
           db.query("SELECT id, title FROM roles", (err, res) => {
             if (err) console.error(err);
             else {
@@ -343,6 +349,7 @@ function updateEmployee(employees, employeeName) {
     });
 }
 
+//this simply asks the user what the name, salary, and department(list) of the new role are and adds it to the database
 function addRole() {
   db.query("SELECT * FROM departments", (err, res) => {
     if (err) console.error(err);
@@ -360,7 +367,7 @@ function addRole() {
                 type: "input",
                 name: "title",
                 message: "What is the title of the new role?",
-                validate: function (value) {
+                validate: function (value) { //this checks if the user has entered a role that already exists
                   if (roles.includes(value))
                     return "That title seems to already be taken, please enter another";
                   return true;
@@ -373,6 +380,7 @@ function addRole() {
                 validate: function (value) {
                   const salary = parseInt(value);
                   if (isNaN(salary) || salary <= 795000)
+                  //probably themost controversial part of this, my validate function assumes the user is adding an NFL player and thus makes sure the salary is above NFL base salary
                     return "Please enter a number greater than the NFL base salary, $795,000";
                   else return true;
                 },
@@ -381,13 +389,13 @@ function addRole() {
                 type: "list",
                 name: "department",
                 message: "what department should this new role be under",
-                choices: departments.map(
+                choices: departments.map( //this little snippet of code is used a ton of places, it basically takes the list of objects that SQL queries return and puts them into arrays that the list inquiries need
                   ({ department_name }) => department_name
                 ),
               },
             ])
             .then((answers) => {
-              const department_id = departments.find(
+              const department_id = departments.find( //this is the other overused snippet of code, it basically just returns he object in the list that has the same name or whatever other variable so I can take the list and the name selected by the user to find the same manager's id.
                 (obj) => obj.department_name === answers.department
               ).id;
               const newRoleObj = {
@@ -395,7 +403,7 @@ function addRole() {
                 department_id,
                 salary: answers.salary,
               };
-              // console.log(`this code will add a new role with title ${newRoleObj.title} and salary ${newRoleObj.salary} as part of the ${newRoleObj.department_id} department`)
+              // I used the insert into set syntax because I thought it was more readable for the JS portion
               db.query("INSERT INTO roles SET ?", newRoleObj, (err, res) => {
                 err ? console.error(err) : viewRoles();
               });
@@ -409,6 +417,7 @@ function addRole() {
   });
 }
 
+//Adds a department, the only variable it needs to ask the user is the name
 function addDepartment() {
   inquirer
     .prompt({
@@ -420,7 +429,6 @@ function addDepartment() {
       const newDepartment = {
         department_name: answer.name,
       };
-      //   console.log(newDepartment);
       db.query("INSERT INTO departments SET ?", newDepartment, (err, res) => {
         err ? console.error(err) : viewDepartments();
       });
@@ -430,6 +438,7 @@ function addDepartment() {
     });
 }
 
+// similar to viewEmployees, but ordering by managers
 function viewEmployeesByManager() {
   db.query(
     `SELECT IFNULL(CONCAT(man.first_name, " ", man.last_name), "No manager on file") as Manager, CONCAT(emp.first_name, " ", emp.last_name) AS Employee, title, department_name as department, salary
@@ -447,6 +456,7 @@ function viewEmployeesByManager() {
   );
 }
 
+//this one is also the same, but ordering by department
 function viewEmployeesByDepartment() {
     db.query(
       `SELECT department_name as department, CONCAT(emp.first_name, " ", emp.last_name) AS Employee, title, salary, IFNULL(CONCAT(man.first_name, " ", man.last_name), "") as Manager
