@@ -25,7 +25,7 @@ This is a node.js application that uses inquirer to accept user input and mysql2
   ```
     npm start
   ```
-  to make the prompts appear and then simply start answering the questions as posed. [Here](https://drive.google.com/file/d/1zKZuKFQZmZCSDvnHtaK3cOm2lGsNuR1T/view) is an example video to give you an idea of how this works before you commit to downloading it.
+  to make the prompts appear and then simply start answering the questions as posed. [Here](https://drive.google.com/file/d/1zKZuKFQZmZCSDvnHtaK3cOm2lGsNuR1T/view) is an example video to give you an idea of how this works before you commit to downloading it, that link should open to a google drive page, but if it has gone down or is otherwise unavailable, it is also included in the repo files.
 
 
   ## Badges
